@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(npm install)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /F /PID 18108)",
+      "Bash(taskkill /F /PID 18108 /T)",
+      "Bash(powershell -Command \"Stop-Process -Id 18108 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 14284 -Force\")"
+    ]
+  }
+}
