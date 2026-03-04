@@ -303,6 +303,19 @@ function parseCommand(input, gitState) {
       result.action = "tag_list";
       return { newState, result };
     }
+    if (tagArgs.startsWith("-d ")) {
+      const tagName = tagArgs.slice(3).trim();
+      const existingTags = gitState.tags || [];
+      if (!existingTags.some(t => t.name === tagName)) {
+        result.message = `❌ タグ '${tagName}' が見つかりません`;
+        return { newState, result };
+      }
+      newState.tags = existingTags.filter(t => t.name !== tagName);
+      result.success = true;
+      result.message = `✅ タグ '${tagName}' を削除しました`;
+      result.action = "tag_delete";
+      return { newState, result };
+    }
     if (!gitState.initialized || !gitState.log.length) {
       result.message = "❌ 先にコミットを作成してください";
       return { newState, result };
@@ -377,14 +390,14 @@ function FlowDiagram({ gitState }) {
 
   // レイアウト定数
   const MY = 158;   // mainコミットのy座標
-  const FY = 238;   // featureコミットのy座標
+  const FY = 265;   // featureコミットのy座標（mainメッセージとの重なりを避けるため余白確保）
   const STEP = 90;  // コミット間の水平間隔
   const MX0 = 415;  // mainコミット開始x
 
   return (
-    <svg viewBox="0 0 820 298" width="100%" height="100%" style={{ display: "block" }}>
+    <svg viewBox="0 0 820 322" width="100%" height="100%" style={{ display: "block" }}>
       {/* Background */}
-      <rect x="0" y="0" width="820" height="298" rx="12" fill="#0d1117" />
+      <rect x="0" y="0" width="820" height="322" rx="12" fill="#0d1117" />
 
       {/* ===== WORK AREA SECTION ===== */}
       {/* ワークツリー */}
@@ -431,7 +444,7 @@ function FlowDiagram({ gitState }) {
         fontSize="9" fontFamily="monospace">commit</text>
 
       {/* ===== REPOSITORY SECTION ===== */}
-      <rect x="350" y="10" width="462" height="283" rx="10"
+      <rect x="350" y="10" width="462" height="308" rx="10"
         fill="#0d1117" stroke="#30363d" strokeWidth="1" strokeDasharray="4 2" />
       <text x="581" y="28" textAnchor="middle" fill="#8b949e" fontSize="11" fontFamily="monospace">リポジトリ（.git）</text>
 
@@ -495,7 +508,7 @@ function FlowDiagram({ gitState }) {
       {/* featureブランチ */}
       {hasFeature && (
         <>
-          <text x="362" y="215" fill="#4ade80" fontSize="13" fontFamily="monospace" fontWeight="bold">feature</text>
+          <text x="362" y={FY - 20} fill="#4ade80" fontSize="13" fontFamily="monospace" fontWeight="bold">feature</text>
           {mainCommits.length > 0 && (
             <line
               x1={MX0 + (mainCommits.length - 1) * STEP}
@@ -628,21 +641,32 @@ export default function GitLearningTool() {
       if (result.action === lesson.expectedAction && !completedLessons.includes(lesson.id)) {
         setCompletedLessons(prev => [...prev, lesson.id]);
         setFeedback({ type: "success", message: lesson.explanation });
-
-        // 次レッスンへの自動進行
-        if (currentLesson < LESSONS.length - 1) {
-          setTimeout(() => {
-            setCurrentLesson(prev => prev + 1);
-            setFeedback(null);
-          }, 3000);
-        } else {
-          setTimeout(() => setFeedback(null), 4000);
-        }
       }
     } else {
       setFeedback({ type: "error", message: result.message });
       setTimeout(() => setFeedback(null), 2000);
     }
+  }
+
+  function handleNextOrReset() {
+    const willBeAllDone = completedLessons.length === LESSONS.length;
+    if (willBeAllDone) {
+      // 全レッスン完了 → 初期状態へリセット
+      setGitState(initialGitState);
+      setCurrentLesson(0);
+      setCompletedLessons([]);
+      setTerminalLines([
+        { type: "system", text: "🎓 Git学習ターミナル（シミュレーター）" },
+        { type: "system", text: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" },
+        { type: "system", text: "⚡ コマンドを入力してEnterを押してください" },
+      ]);
+      setInputValue("");
+      setShowHint(false);
+    } else {
+      // 次のレッスンへ進む
+      setCurrentLesson(prev => prev + 1);
+    }
+    setFeedback(null);
   }
 
   function handleKeyDown(e) {
@@ -965,8 +989,23 @@ export default function GitLearningTool() {
                 flexShrink: 0,
               }}>
                 {feedback.type === "success" ? "✅ 正解！" : "❌ "} {feedback.message}
-                {feedback.type === "success" && currentLesson < LESSONS.length - 1 && (
-                  <span style={{ color: "#8b949e" }}>（3秒後に次のレッスンへ…）</span>
+                {feedback.type === "success" && !allDone && (
+                  <button
+                    onClick={handleNextOrReset}
+                    style={{
+                      marginLeft: "auto",
+                      background: allDone ? "#7c3aed" : "#1d4ed8",
+                      border: "none",
+                      borderRadius: 6,
+                      color: "white",
+                      padding: "5px 14px",
+                      fontSize: 14,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
+                    }}>
+                    {allDone ? "🔄 最初からやり直す" : "次のレッスンへ ▶"}
+                  </button>
                 )}
               </div>
             )}
@@ -979,10 +1018,28 @@ export default function GitLearningTool() {
                 padding: "10px 16px",
                 fontSize: 17,
                 color: "#3fb950",
-                textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 16,
                 flexShrink: 0,
               }}>
                 🎉 全{LESSONS.length}レッスン完了！お疲れ様でした！ Git の基本ワークフローをマスターしました 🎉
+                <button
+                  onClick={handleNextOrReset}
+                  style={{
+                    background: "#7c3aed",
+                    border: "none",
+                    borderRadius: 6,
+                    color: "white",
+                    padding: "6px 16px",
+                    fontSize: 15,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                  }}>
+                  🔄 最初からやり直す
+                </button>
               </div>
             )}
 
