@@ -590,7 +590,7 @@ export default function GitLearningTool() {
   const inputRef = useRef(null);
 
   const lesson = LESSONS[currentLesson];
-  const allDone = completedLessons.length === LESSONS.length;
+  const allDone = currentLesson === LESSONS.length - 1 && completedLessons.includes(lesson.id);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -648,8 +648,14 @@ export default function GitLearningTool() {
     }
   }
 
+  function handleSkip() {
+    setCurrentLesson(prev => prev + 1);
+    setFeedback(null);
+    setShowHint(false);
+  }
+
   function handleNextOrReset() {
-    const willBeAllDone = completedLessons.length === LESSONS.length;
+    const willBeAllDone = currentLesson === LESSONS.length - 1;
     if (willBeAllDone) {
       // 全レッスン完了 → 初期状態へリセット
       setGitState(initialGitState);
@@ -932,20 +938,36 @@ export default function GitLearningTool() {
                   </div>
                   <div style={{ color: "#8b949e", fontSize: 15, marginBottom: 4 }}>{lesson.description}</div>
                 </div>
-                <button
-                  onClick={() => setShowHint(v => !v)}
-                  style={{
-                    background: showHint ? "#1a1a0a" : "transparent",
-                    border: `1px solid ${showHint ? "#f0883e" : "#30363d"}`,
-                    borderRadius: 6,
-                    color: showHint ? "#f0883e" : "#8b949e",
-                    padding: "5px 12px",
-                    fontSize: 14,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}>
-                  {showHint ? "ヒント非表示" : "💡 ヒント"}
-                </button>
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  {lesson.id < LESSONS.length && (
+                    <button
+                      onClick={handleSkip}
+                      style={{
+                        background: "transparent",
+                        border: "1px solid #30363d",
+                        borderRadius: 6,
+                        color: "#6e7681",
+                        padding: "5px 12px",
+                        fontSize: 14,
+                        cursor: "pointer",
+                      }}>
+                      ⏭ スキップ
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowHint(v => !v)}
+                    style={{
+                      background: showHint ? "#1a1a0a" : "transparent",
+                      border: `1px solid ${showHint ? "#f0883e" : "#30363d"}`,
+                      borderRadius: 6,
+                      color: showHint ? "#f0883e" : "#8b949e",
+                      padding: "5px 12px",
+                      fontSize: 14,
+                      cursor: "pointer",
+                    }}>
+                    {showHint ? "ヒント非表示" : "💡 ヒント"}
+                  </button>
+                </div>
               </div>
               {showHint && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
